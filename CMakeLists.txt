@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.8.2)
 # Version numbers are available by including "exampleConfig.h" in the source.
 # See exampleConfig.h.in for some more details.
 project(ctodo VERSION 0.0.1 LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
 
 # Options: Things you can set via commandline options to cmake (e.g.
 # -DENABLE_LTO=[ON|OFF])
@@ -38,7 +39,6 @@ set(SOURCES # All .cpp files in src/
 set(TESTFILES # All .cpp files in tests/
     tests/main.cpp)
 
-# find_package(plog)
 find_package(loguru)
 find_package(easyloggingpp)
 
@@ -53,7 +53,7 @@ find_package(easyloggingpp)
 
 add_executable(ctodo src/main.cc) # Name of exec. and location of file.
 target_include_directories(ctodo PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(ctodo PRIVATE loguru easyloggingpp)
+target_link_libraries(ctodo PRIVATE easyloggingpp::easyloggingpp loguru)
 
 target_set_warnings(ctodo
                     ENABLE
