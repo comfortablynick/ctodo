@@ -40,20 +40,14 @@ set(TESTFILES # All .cpp files in tests/
     tests/main.cpp)
 
 find_package(loguru)
-find_package(easyloggingpp)
 
 # -----------------------------------------------------------------------------
 # Build! (Change as needed)
 # -----------------------------------------------------------------------------
 
-# Lib needs its header files, and users of the library must also see these
-# (PUBLIC). (No change needed)
-
-# Set the compile options you want (change as needed).
-
 add_executable(ctodo src/main.cc) # Name of exec. and location of file.
 target_include_directories(ctodo PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(ctodo PRIVATE easyloggingpp::easyloggingpp loguru)
+target_link_libraries(ctodo PRIVATE loguru stdc++fs)
 
 target_set_warnings(ctodo
                     ENABLE

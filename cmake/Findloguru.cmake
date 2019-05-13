@@ -5,8 +5,12 @@ FetchContent_Declare(loguru
 FetchContent_GetProperties(loguru)
 if(NOT loguru_POPULATED)
   FetchContent_Populate(loguru)
-  message(STATUS "PACKAGE loguru source dir: ${loguru_SOURCE_DIR}")
-  message(STATUS "PACKAGE loguru binary dir: ${loguru_BINARY_DIR}")
+  message(
+    STATUS
+      "${BoldCyan}PACKAGE loguru source dir: ${loguru_SOURCE_DIR}${ColorReset}")
+  message(
+    STATUS
+      "${BoldCyan}PACKAGE loguru binary dir: ${loguru_BINARY_DIR}${ColorReset}")
   include_directories("${loguru_SOURCE_DIR}")
   add_library(loguru STATIC ${loguru_SOURCE_DIR}/loguru.cpp)
   target_link_options(loguru
