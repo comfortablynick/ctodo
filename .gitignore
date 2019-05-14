@@ -38,3 +38,5 @@ build/
 # Language server
 compile_commands.json
 
+# Config header
+include/config.h

@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.8.2)
 
 # Version numbers are available by including "exampleConfig.h" in the source.
 # See exampleConfig.h.in for some more details.
-project(ctodo VERSION 0.0.1 LANGUAGES CXX)
+project(ctodo
+        VERSION 0.0.1
+        DESCRIPTION "Fast todo.txt implementation in C++"
+        HOMEPAGE_URL "github.com/comfortablynick/ctodo"
+        LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 
 # Options: Things you can set via commandline options to cmake (e.g.
@@ -25,8 +29,8 @@ include(CTest)
 include(Doctest)
 include(Documentation)
 include(LTO)
-include(Misc)
 include(Warnings)
+include(Misc)
 
 # Check for LTO support.
 find_lto(CXX)
@@ -39,7 +43,13 @@ set(SOURCES # All .cpp files in src/
 set(TESTFILES # All .cpp files in tests/
     tests/main.cpp)
 
+find_package(fmt)
 find_package(loguru)
+
+# -----------------------------------------------------------------------------
+# Generate config.h
+# -----------------------------------------------------------------------------
+include(Configure)
 
 # -----------------------------------------------------------------------------
 # Build! (Change as needed)
@@ -47,7 +57,7 @@ find_package(loguru)
 
 add_executable(ctodo src/main.cc) # Name of exec. and location of file.
 target_include_directories(ctodo PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(ctodo PRIVATE loguru stdc++fs)
+target_link_libraries(ctodo PUBLIC fmt loguru stdc++fs)
 
 target_set_warnings(ctodo
                     ENABLE

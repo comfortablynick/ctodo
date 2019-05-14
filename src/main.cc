@@ -1,8 +1,9 @@
+#include "config.h"
 #include <filesystem>
+// #include <fmt/core.h>
 #include <fstream>
 #include <iostream>
 #include <loguru.hpp>
-// #include <regex>
 #include <sstream>
 #include <string>
 #include <sys/ioctl.h>
@@ -57,7 +58,7 @@ void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
         }
     }
     loguru::init(argc, argv, verbosity_flag);
-    VLOG_F(1, "Terminal size: %dx%d", tsize->cols, tsize->lines);
+    VLOG_F(1, "Terminal size: {}x{}", tsize->cols, tsize->lines);
 }
 
 std::string get_file_contents(const char* fpath)
@@ -68,7 +69,7 @@ std::string get_file_contents(const char* fpath)
         ss << file.rdbuf();
         return ss.str();
     } else {
-        LOG_F(ERROR, "File '%s' not found.", fpath);
+        LOG_F(ERROR, "File '{}' not found.", fpath);
         return "";
     }
 }
@@ -101,7 +102,7 @@ std::string fmt_list(std::string& raw)
     tokenize(raw, words, " \n");
     if (LOG_IS_ON(2)) {
         for (size_t i = 0; i < words.size(); ++i) {
-            VLOG_S(2) << i << ' ' << words[i];
+            VLOG_F(2, "{}: {}", i, words[i]);
         }
     }
     return raw;
@@ -126,7 +127,8 @@ int main(int argc, char** argv)
 #endif
     std::filesystem::path fpath(std::getenv("HOME"));
     fpath.append("Dropbox").append("todo").append("todo.txt");
-    VLOG_S(1) << "File path: " << fpath;
+    fmt::print("Todo file: {}", fpath.c_str());
+    VLOG_F(1, "File path: {}", fpath.c_str());
     std::string raw(get_file_contents(fpath.c_str()));
     std::cout << fmt_list(raw);
 }
