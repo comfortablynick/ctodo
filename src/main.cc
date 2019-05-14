@@ -8,6 +8,9 @@
 #include <sys/ioctl.h>
 #include <sys/unistd.h>
 #include <vector>
+#ifndef LOG_IS_ON
+#define LOG_IS_ON(verbosity) ((loguru::Verbosity_##verbosity) <= loguru::current_verbosity_cutoff())
+#endif
 #define DEBUG_MODE 0 // Automatically output console logs by default
 
 struct termsize
@@ -70,6 +73,40 @@ std::string get_file_contents(const char* fpath)
     }
 }
 
+template <typename ContainerT>
+void tokenize(const std::string& str, ContainerT& tokens, const std::string& delimiters = " ",
+              bool trimEmpty = false)
+{
+    std::string::size_type pos, lastPos = 0, length = str.length();
+
+    using value_type = typename ContainerT::value_type;
+    using size_type = typename ContainerT::size_type;
+
+    while (lastPos < length + 1) {
+        pos = str.find_first_of(delimiters, lastPos);
+        if (pos == std::string::npos) {
+            pos = length;
+        }
+
+        if (pos != lastPos || !trimEmpty)
+            tokens.push_back(value_type(str.data() + lastPos, (size_type)pos - lastPos));
+
+        lastPos = pos + 1;
+    }
+}
+
+std::string fmt_list(std::string& raw)
+{
+    std::vector<std::string> words;
+    tokenize(raw, words, " \n");
+    if (LOG_IS_ON(2)) {
+        for (size_t i = 0; i < words.size(); ++i) {
+            VLOG_S(2) << i << ' ' << words[i];
+        }
+    }
+    return raw;
+}
+
 int main(int argc, char** argv)
 {
 #if DEBUG_MODE == 1
@@ -90,5 +127,6 @@ int main(int argc, char** argv)
     std::filesystem::path fpath(std::getenv("HOME"));
     fpath.append("Dropbox").append("todo").append("todo.txt");
     VLOG_S(1) << "File path: " << fpath;
-    std::cout << get_file_contents(fpath.c_str());
+    std::string raw(get_file_contents(fpath.c_str()));
+    std::cout << fmt_list(raw);
 }
