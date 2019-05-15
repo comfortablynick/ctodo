@@ -13,6 +13,6 @@ set(PACKAGE_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
 
 # Generate config.h
 message(STATUS "Running configure")
-configure_file("${PROJECT_SOURCE_DIR}/include/config.h.cmake"
+configure_file("${PROJECT_SOURCE_DIR}/include/config.h.in"
                "${PROJECT_SOURCE_DIR}/include/config.h" @ONLY)
 message(STATUS "Running configure - done")

@@ -2,11 +2,12 @@
 
 # TODO: check that we are in top level (.git?)
 # clear build directory
+cd "$(dirname "$0")" || exit 1
 rm -rf build
 mkdir build && cd build || exit 1
 
 # build
-cmake .. -DCMAKE_BUILD_TYPE="${1:-RelWithDebInfo}"
+cmake .. -DCMAKE_BUILD_TYPE="${1:-Debug}"
 make install
 
 # link compile_commands.json for source code completion

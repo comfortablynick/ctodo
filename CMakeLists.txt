@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.8.2)
 
-# Version numbers are available by including "exampleConfig.h" in the source.
-# See exampleConfig.h.in for some more details.
 project(ctodo
         VERSION 0.0.1
         DESCRIPTION "Fast todo.txt implementation in C++"
