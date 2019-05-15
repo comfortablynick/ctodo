@@ -1,6 +1,6 @@
 #include "config.h"
 #include <filesystem>
-// #include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <fstream>
 #include <iostream>
 #include <loguru.hpp>
@@ -14,6 +14,97 @@
 #endif
 #define DEBUG_MODE 0 // Automatically output console logs by default
 
+// Output a text representation of vector to stream.
+// For pretty output, use prettify() to get string first.
+// @param out Stream to print to
+// @param vec Vector to print
+template <class T>
+std::ostream& operator<<(std::ostream& out, const std::vector<T>& vec)
+{
+    out << '[';
+    for (size_t i = 0; i < vec.size(); ++i) {
+        if (i != 0) out << ", ";
+        out << vec[i];
+    }
+    out << ']';
+    return out;
+}
+
+// Pretty print representation of vector.
+// For simple debug print, use << operator on vector directly.
+// @param vec Vector of <T> type
+template <class T>
+std::string prettify(const std::vector<T>& vec)
+{
+    fmt::memory_buffer out;
+    fmt::format_to(out, "[\n");
+    for (size_t i = 0; i < vec.size(); ++i) {
+        if (i != 0) fmt::format_to(out, ",\n");
+        fmt::format_to(out, "{:3}: {}", i, vec[i]);
+    }
+    fmt::format_to(out, "\n]");
+    return fmt::to_string(out);
+}
+// namespace Ansi { {{{
+//     // Value on the Ansi 256 color spectrum
+//     enum class Color : unsigned int
+//     {
+//         // std colors
+//         black = 0,
+//         blue = 12,
+//         green = 2,
+//         cyan = 37,
+//         red = 124,
+//         yellow = 142,
+//         gray = 245,
+//
+//         // bright colors
+//         brcyan = 51,
+//         brred = 196,
+//         bryellow = 226,
+//     };
+//
+//     // Set foreground color
+//     //
+//     // @param color Color from Ansi::Color enum
+//     const std::string setFg(Color color)
+//     {
+//         const auto env_term = getenv("TERM");
+//         if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
+//             return "";
+//         }
+//         // std::ostringstream escape_fg;
+//         // escape_fg << "\033[38;5;" << static_cast<unsigned int>(color) << "m";
+//         // return escape_fg.str();
+//         return fmt::format("\033[38;5;{}m", static_cast<unsigned int>(color));
+//     }
+//
+//     // Set background color
+//     //
+//     // @param color Color from Ansi::Color enum
+//     const std::string setBg(Ansi::Color color)
+//     {
+//         const auto env_term = getenv("TERM");
+//         if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
+//             return "";
+//         }
+//         // std::ostringstream escape_fg;
+//         // escape_fg << "\033[48;5;" << static_cast<unsigned int>(color) << "m";
+//         // return escape_fg.str();
+//         return fmt::format("\033[48;5;{}m", static_cast<unsigned int>(color));
+//     }
+//
+//     // Reset colors
+//     const std::string reset()
+//     {
+//         const auto env_term = getenv("TERM");
+//         if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
+//             return "";
+//         }
+//         return "\033[0m";
+//     }
+// } // namespace Ansi
+// }}}
 struct termsize
 {
     unsigned cols, lines;
@@ -102,7 +193,7 @@ std::string fmt_list(std::string& raw)
     tokenize(raw, words, " \n");
     if (LOG_IS_ON(2)) {
         for (size_t i = 0; i < words.size(); ++i) {
-            VLOG_F(2, "{}: {}", i, words[i]);
+            LOG_F(2, "{}: {}", i, words[i]);
         }
     }
     return raw;
@@ -127,8 +218,11 @@ int main(int argc, char** argv)
 #endif
     std::filesystem::path fpath(std::getenv("HOME"));
     fpath.append("Dropbox").append("todo").append("todo.txt");
-    fmt::print("Todo file: {}", fpath.c_str());
-    VLOG_F(1, "File path: {}", fpath.c_str());
+    LOG_F(1, "File path: {}", fpath);
     std::string raw(get_file_contents(fpath.c_str()));
-    std::cout << fmt_list(raw);
+    // std::cout << fmt_list(raw);
+    std::vector<std::string> lines;
+    tokenize(raw, lines, "\n");
+    // std::cout << lines;
+    fmt::print(std::cout, "{}\n", prettify(lines));
 }
