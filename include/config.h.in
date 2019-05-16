@@ -1,4 +1,9 @@
 /* COMPILE-TIME DEFINITIONS */
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// clang-format off
+#cmakedefine01 DEBUG_BUILD @DEBUG_BUILD@
 
 #cmakedefine PACKAGE_NAME "@PACKAGE_NAME@"
 #cmakedefine PACKAGE_DESCRIPTION "@PACKAGE_DESCRIPTION@"
@@ -8,6 +13,7 @@
 #cmakedefine PACKAGE_URL "@PACKAGE_URL@"
 #cmakedefine PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
 
+
 /* loguru - no effect if building as library */
 #cmakedefine LOGURU_WITH_STREAMS @LOGURU_WITH_STREAMS@
 #cmakedefine LOGURU_REPLACE_GLOG @LOGURU_REPLACE_GLOG@
@@ -16,4 +22,7 @@
 #cmakedefine LOGURU_VERBOSE_SCOPE_ENDINGS @LOGURU_VERBOSE_SCOPE_ENDINGS@
 #cmakedefine LOGURU_SCOPE_TIME_PRECISION @LOGURU_SCOPE_TIME_PRECISION@
 
-#cmakedefine USING_LOGURU @USING_LOGURU@
+#ifndef LOG_IS_ON
+#define LOG_IS_ON(verbosity) ((loguru::Verbosity_##verbosity) <= loguru::current_verbosity_cutoff())
+#endif // LOG_IS_ON
+#endif // CONFIG_H

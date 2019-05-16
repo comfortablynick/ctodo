@@ -1,5 +1,6 @@
 #include "config.h"
 #include <filesystem>
+#include <fmt/color.h>
 #include <fmt/ostream.h>
 #include <fstream>
 #include <iostream>
@@ -9,13 +10,8 @@
 #include <sys/ioctl.h>
 #include <sys/unistd.h>
 #include <vector>
-#ifndef LOG_IS_ON
-#define LOG_IS_ON(verbosity) ((loguru::Verbosity_##verbosity) <= loguru::current_verbosity_cutoff())
-#endif
 
-#ifndef DEBUG_MODE
-#define DEBUG_MODE 1 // Automatically output console logs by default
-#endif
+constexpr bool DEBUG_MODE = true; // More verbose console logging
 
 // Output a text representation of vector to stream.
 // For pretty output, use prettify() to get string first.
@@ -206,9 +202,20 @@ int main(int argc, char** argv)
     tokenize(raw, lines, "\n", true);
     fmt::print(std::cout, "{}\n", prettify(lines));
 
+    fmt::memory_buffer buf;
     for (size_t i = 0; i < lines.size(); ++i) {
         std::vector<std::string> words;
         tokenize(lines[i], words, " ", true);
-        LOG_F(2, "Line {}\n{}\n{}", i, lines[i], words);
+        // LOG_F(2, "Line {}\n{}\n{}", i, lines[i], words);
+        for (auto& word : words) {
+            if (word.at(0) == '@') {
+                fmt::format_to(buf, fmt::format(fg(fmt::color::orange), "{}", word));
+            } else {
+                fmt::format_to(buf, "{}", word);
+            }
+            fmt::format_to(buf, " ");
+        }
+        fmt::format_to(buf, "\n");
     }
+    std::cout << buf.data() << std::endl;
 }

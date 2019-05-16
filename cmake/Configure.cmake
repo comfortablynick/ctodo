@@ -3,6 +3,9 @@
 # source code. Include "config.h" in source code
 
 # Preprocessing define pkg vars in config.h
+if(cmake_build_type_tolower STREQUAL "debug")
+  set(DEBUG_BUILD 1)
+endif()
 set(PACKAGE_NAME ${PROJECT_NAME})
 set(PACKAGE_DESCRIPTION ${PROJECT_DESCRIPTION})
 set(PACKAGE_TARNAME ${PROJECT_NAME})

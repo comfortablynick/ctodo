@@ -24,7 +24,6 @@ if(NOT ${pkg}_POPULATED)
 endif()
 
 # loguru compile options
-set(USING_LOGURU 1)
 set(LOGURU_WITH_STREAMS 0)
 set(LOGURU_USE_FMTLIB 1)
 set(LOGURU_REPLACE_GLOG 0)
