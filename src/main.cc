@@ -7,16 +7,17 @@
 #include <loguru.hpp>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <sys/ioctl.h>
 #include <sys/unistd.h>
 #include <vector>
 
 constexpr bool DEBUG_MODE = true; // More verbose console logging
 
-// Output a text representation of vector to stream.
-// For pretty output, use prettify() to get string first.
-// @param out Stream to print to
-// @param vec Vector to print
+/// Output a text representation of vector to stream.
+/// For pretty output, use prettify() to get string first.
+/// @param `out` Stream to print to
+/// @param `vec` Vector to print
 template <class T>
 std::ostream& operator<<(std::ostream& out, const std::vector<T>& vec)
 {
@@ -29,9 +30,9 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& vec)
     return out;
 }
 
-// Pretty print representation of vector.
-// For simple debug print, use << operator on vector directly.
-// @param vec Vector of <T> type
+/// Pretty print representation of vector.
+/// For simple debug print, use << operator on vector directly.
+/// @param `vec` Vector of <T> type
 template <class T>
 std::string prettify(const std::vector<T>& vec)
 {
@@ -44,65 +45,14 @@ std::string prettify(const std::vector<T>& vec)
     fmt::format_to(out, "\n]");
     return fmt::to_string(out);
 }
-// namespace Ansi { {{{
-//     // Value on the Ansi 256 color spectrum
-//     enum class Color : unsigned int
-//     {
-//         // std colors
-//         black = 0,
-//         blue = 12,
-//         green = 2,
-//         cyan = 37,
-//         red = 124,
-//         yellow = 142,
-//         gray = 245,
-//
-//         // bright colors
-//         brcyan = 51,
-//         brred = 196,
-//         bryellow = 226,
-//     };
-//
-//     // Set foreground color
-//     //
-//     // @param color Color from Ansi::Color enum
-//     const std::string setFg(Color color)
-//     {
-//         const auto env_term = getenv("TERM");
-//         if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
-//             return "";
-//         }
-//         return fmt::format("\033[38;5;{}m", static_cast<unsigned int>(color));
-//     }
-//
-//     // Set background color
-//     //
-//     // @param color Color from Ansi::Color enum
-//     const std::string setBg(Ansi::Color color)
-//     {
-//         const auto env_term = getenv("TERM");
-//         if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
-//             return "";
-//         }
-//         return fmt::format("\033[48;5;{}m", static_cast<unsigned int>(color));
-//     }
-//
-//     // Reset colors
-//     const std::string reset()
-//     {
-//         const auto env_term = getenv("TERM");
-//         if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
-//             return "";
-//         }
-//         return "\033[0m";
-//     }
-// } // namespace Ansi
-// }}}
+
+/// Data structure for terminal cols and lines
 struct termsize
 {
     unsigned cols, lines;
 };
 
+/// Get runtime terminal size (lines & cols)
 std::shared_ptr<termsize> getTermSize()
 {
     auto tsize_t = std::make_shared<termsize>();
@@ -120,15 +70,20 @@ std::shared_ptr<termsize> getTermSize()
     return tsize_t;
 }
 
+/// Initialize loguru with command line args
+/// @param `argc` CLI argument count
+/// @param `argv` CLI argument array
+/// @param `verbosity_flag` Optional flag to parse for verbosity level.
+/// Set to `nullptr` to skip parsing flag
+///
+/// | -v | Level  |
+/// |----|--------|
+/// | -2 |   ERROR|
+/// | -1 | WARNING|
+/// |  0 |    INFO|
+/// |1-9 | VERBOSE|
 void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
 {
-    // init loguru
-    //
-    // VERBOSITY LEVELS
-    //  -2 |   ERROR
-    //  -1 | WARNING
-    //   0 |    INFO
-    // 1-9 | VERBOSE
     loguru::g_stderr_verbosity = -2;
     loguru::g_colorlogtostderr = true;
     loguru::g_flush_interval_ms = 100;
@@ -145,17 +100,33 @@ void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
     VLOG_F(1, "Terminal size: {}x{}", tsize->cols, tsize->lines);
 }
 
-std::string get_file_contents(const char* fpath)
+/// Get filesystem path of todo.txt file
+std::string get_todo_file_path()
 {
-    std::ifstream file(fpath);
+    // TODO: check env vars
+    std::filesystem::path fpath(std::getenv("HOME"));
+    fpath.append("Dropbox").append("todo").append("todo.txt");
+    LOG_F(INFO, "Todo file path: {}", fpath);
+    return fpath.string();
+}
+
+/// Get entire file as a string
+/// @param `fpath` Path to file
+std::string get_file_contents(std::string_view fpath)
+{
+    std::ifstream file(fpath.data());
     CHECK_F(file.is_open(), "Failed to open file '{}'", fpath);
     std::stringstream ss;
     ss << file.rdbuf();
     return ss.str();
 }
 
+/// Get a container of tokens from string
+/// @param `str` String view (read-only) to tokenize
+/// @param `tokens` Container ref to fill
+/// @param `delimiters` Split using this string view
 template <typename ContainerT>
-void tokenize(const std::string& str, ContainerT& tokens, const std::string& delimiters = " ",
+void tokenize(std::string_view str, ContainerT& tokens, std::string_view delimiters = " ",
               bool trimEmpty = false)
 {
     std::string::size_type pos, lastPos = 0, length = str.length();
@@ -176,6 +147,34 @@ void tokenize(const std::string& str, ContainerT& tokens, const std::string& del
     }
 }
 
+/// Get colorized output for printing to console
+/// @param `lines` Reference to vector of lines
+std::string format_lines(std::vector<std::string>& lines)
+{
+    std::string out;
+    auto light_orange = fmt::rgb(255, 175, 95);
+    auto lime = fmt::rgb(175, 255, 0);
+    for (size_t i = 0; i < lines.size(); ++i) {
+        std::vector<std::string> words;
+        tokenize(lines[i], words, " ", true);
+        if (i > 0) out.push_back('\n');
+        for (auto& word : words) {
+            switch (word.at(0)) {
+            case '@':
+                out.append(fmt::format(fg(light_orange), word));
+                break;
+            case '+':
+                out.append(fmt::format(fg(lime), word));
+                break;
+            default:
+                out.append(word);
+            }
+            out.push_back(' ');
+        }
+    }
+    return out;
+}
+
 int main(int argc, char** argv)
 {
     if constexpr (DEBUG_MODE) {
@@ -194,28 +193,13 @@ int main(int argc, char** argv)
         // init loguru with raw cli args
         init_loguru(argc, argv);
     }
-    std::filesystem::path fpath(std::getenv("HOME"));
-    fpath.append("Dropbox").append("todo").append("todo.txt");
-    LOG_F(INFO, "Todo file path: {}", fpath);
-    std::string raw(get_file_contents(fpath.c_str()));
+
+    std::string raw(get_file_contents(get_todo_file_path()));
     std::vector<std::string> lines;
     tokenize(raw, lines, "\n", true);
-    fmt::print(std::cout, "{}\n", prettify(lines));
+    LOG_F(2, "{}\n", prettify(lines));
+    std::string out(format_lines(lines));
 
-    fmt::memory_buffer buf;
-    for (size_t i = 0; i < lines.size(); ++i) {
-        std::vector<std::string> words;
-        tokenize(lines[i], words, " ", true);
-        // LOG_F(2, "Line {}\n{}\n{}", i, lines[i], words);
-        for (auto& word : words) {
-            if (word.at(0) == '@') {
-                fmt::format_to(buf, fmt::format(fg(fmt::color::orange), "{}", word));
-            } else {
-                fmt::format_to(buf, "{}", word);
-            }
-            fmt::format_to(buf, " ");
-        }
-        fmt::format_to(buf, "\n");
-    }
-    std::cout << buf.data() << std::endl;
+    // write output to stdout
+    std::cout << out << std::endl;
 }
