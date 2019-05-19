@@ -46,6 +46,74 @@ std::string prettify(const std::vector<T>& vec)
     return fmt::to_string(out);
 }
 
+namespace Ansi {
+    // Value on the Ansi 256 color spectrum
+    enum class Color : unsigned int
+    {
+        // std colors
+        black = 0,
+        blue = 12,
+        green = 2,
+        cyan = 37,
+        red = 124,
+        yellow = 142,
+        lime = 154,
+        lightorange = 215,
+        gray = 245,
+
+        // bright colors
+        brcyan = 51,
+        brred = 196,
+        bryellow = 226,
+    };
+
+    /// Set foreground color
+    ///
+    /// @param color Color from Ansi::Color enum
+    const std::string setFg(Ansi::Color color)
+    {
+        const auto env_term = getenv("TERM");
+        if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
+            return "";
+        }
+        return fmt::format("\033[38;5;{}m", static_cast<unsigned int>(color));
+    }
+
+    /// Set foreground color
+    ///
+    /// @param color Color from 256 color palette
+    const std::string setFg(uint8_t color)
+    {
+        const auto env_term = getenv("TERM");
+        if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
+            return "";
+        }
+        return fmt::format("\033[38;5;{}m", color);
+    }
+
+    /// Set background color
+    ///
+    /// @param color Color from Ansi::Color enum
+    const std::string setBg(Color color)
+    {
+        const auto env_term = getenv("TERM");
+        if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
+            return "";
+        }
+        return fmt::format("\033[48;5;{}m", static_cast<unsigned int>(color));
+    }
+
+    /// Reset colors
+    const std::string reset()
+    {
+        const auto env_term = getenv("TERM");
+        if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
+            return "";
+        }
+        return "\033[0m";
+    }
+} // namespace Ansi
+
 /// Data structure for terminal cols and lines
 struct termsize
 {
@@ -152,8 +220,6 @@ void tokenize(std::string_view str, ContainerT& tokens, std::string_view delimit
 std::string format_lines(std::vector<std::string>& lines)
 {
     std::string out;
-    auto light_orange = fmt::rgb(255, 175, 95);
-    auto lime = fmt::rgb(175, 255, 0);
     for (size_t i = 0; i < lines.size(); ++i) {
         std::vector<std::string> words;
         tokenize(lines[i], words, " ", true);
@@ -161,10 +227,12 @@ std::string format_lines(std::vector<std::string>& lines)
         for (auto& word : words) {
             switch (word.at(0)) {
             case '@':
-                out.append(fmt::format(fg(light_orange), word));
+                out.append(fmt::format("{}{}{}", Ansi::setFg(Ansi::Color::lightorange), word,
+                                       Ansi::reset()));
                 break;
             case '+':
-                out.append(fmt::format(fg(lime), word));
+                out.append(
+                    fmt::format("{}{}{}", Ansi::setFg(Ansi::Color::lime), word, Ansi::reset()));
                 break;
             default:
                 out.append(word);
