@@ -169,13 +169,13 @@ void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
 }
 
 /// Get filesystem path of todo.txt file
-std::string get_todo_file_path()
+std::filesystem::path get_todo_file_path()
 {
     // TODO: check env vars
     std::filesystem::path fpath(std::getenv("HOME"));
     fpath.append("Dropbox").append("todo").append("todo.txt");
     LOG_F(INFO, "Todo file path: {}", fpath);
-    return fpath.string();
+    return fpath;
 }
 
 /// Get entire file as a string
@@ -187,6 +187,36 @@ std::string get_file_contents(std::string_view fpath)
     std::stringstream ss;
     ss << file.rdbuf();
     return ss.str();
+}
+
+/// Get entire file as a string
+/// @param `fpath` Path to file
+std::string get_file_contents2(std::filesystem::path fpath)
+{
+    std::ifstream file(fpath);
+    const auto fsize = std::filesystem::file_size(fpath);
+    std::string result(fsize, ' ');
+    file.read(result.data(), fsize);
+    return result;
+}
+
+std::vector<std::string> get_file_contents_c(std::filesystem::path fpath)
+{
+    FILE* fp = fopen(fpath.c_str(), "r");
+    CHECK_F(fp != NULL);
+
+    char* line = NULL;
+    size_t len = 0;
+    // const auto fsize = std::filesystem::file_size(fpath);
+    // std::string result(fsize, ' ');
+    std::vector<std::string> result;
+    while ((getline(&line, &len, fp)) != -1) {
+        // result.append(line);
+        result.emplace_back(std::string(line));
+    }
+    fclose(fp);
+    if (line) free(line);
+    return result;
 }
 
 /// Get a container of tokens from string
@@ -262,7 +292,8 @@ int main(int argc, char** argv)
         init_loguru(argc, argv);
     }
 
-    std::string raw(get_file_contents(get_todo_file_path()));
+    std::string raw(get_file_contents2(get_todo_file_path().string()));
+    // std::vector<std::string> lines(get_file_contents_c(get_todo_file_path().string()));
     std::vector<std::string> lines;
     tokenize(raw, lines, "\n", true);
     LOG_F(2, "{}\n", prettify(lines));
