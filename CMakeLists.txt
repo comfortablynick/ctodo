@@ -13,6 +13,8 @@ option(ENABLE_WARNINGS_SETTINGS
        "Allow target_set_warnings to add flags and defines.
        Set this to OFF if you want to provide your own warning parameters." ON)
 
+option(ENABLE_IWYU "Check header includes with include-what-you-use" ON)
+
 option(ENABLE_LTO "Enable link time optimization" ON)
 
 option(ENABLE_DOCTESTS "Include tests in the library.
@@ -43,6 +45,8 @@ set(TESTFILES # All .cpp files in tests/
 
 find_package(fmt)
 find_package(loguru)
+find_package(args)
+# find_package(cxxopts)
 
 # -----------------------------------------------------------------------------
 # Generate config.h
@@ -56,6 +60,7 @@ include(Configure)
 add_executable(ctodo src/main.cc) # Name of exec. and location of file.
 target_include_directories(ctodo PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(ctodo PUBLIC fmt loguru stdc++fs)
+set(IWYU_TARGETS ctodo)
 
 target_set_warnings(ctodo
                     ENABLE
@@ -76,8 +81,6 @@ set_target_properties(ctodo
                                  YES
                                  CXX_EXTENSIONS
                                  NO)
-
-# Set up tests (see tests/CMakeLists.txt). add_subdirectory(tests) Check
-# includes with include-what-you-use
 include(CheckIWYU)
+
 install(TARGETS ctodo DESTINATION $ENV{HOME}/bin)

@@ -1,16 +1,22 @@
 #include "config.h"
+#include <algorithm>
+#include <args.hxx>
+#include <cstdlib>
+// #include <cxxopts.hpp>
+#include <ext/alloc_traits.h>
 #include <filesystem>
-#include <fmt/color.h>
-#include <fmt/ostream.h>
-#include <fstream>
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fstream> // IWYU pragma: keep
 #include <iostream>
 #include <loguru.hpp>
-#include <sstream>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <sys/ioctl.h>
-#include <sys/unistd.h>
+#include <unistd.h>
 #include <vector>
+// #include <algorithm>
 
 constexpr bool DEBUG_MODE = true; // More verbose console logging
 
@@ -46,8 +52,20 @@ std::string prettify(const std::vector<T>& vec)
     return fmt::to_string(out);
 }
 
+/// Get string value of env variable
+/// @param key Read-only env var key
+std::string get_env_var(std::string_view key)
+{
+    const char* val = getenv(key.data());
+    if (val != nullptr) {
+        return std::string(val);
+    }
+    LOG_F(WARNING, "Undefined env var '{}'", key);
+    return std::string();
+}
+
 namespace Ansi {
-    // Value on the Ansi 256 color spectrum
+    /// Value on the Ansi 256 color spectrum
     enum class Color : unsigned int
     {
         // std colors
@@ -68,37 +86,31 @@ namespace Ansi {
     };
 
     /// Set foreground color
-    ///
     /// @param color Color from Ansi::Color enum
     const std::string setFg(Ansi::Color color)
     {
-        const auto env_term = getenv("TERM");
-        if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
-            return "";
+        if (std::string e = get_env_var("TERM"); e == "dumb") {
+            return std::string();
         }
         return fmt::format("\033[38;5;{}m", static_cast<unsigned int>(color));
     }
 
     /// Set foreground color
-    ///
     /// @param color Color from 256 color palette
-    const std::string setFg(uint8_t color)
+    const std::string setFg(unsigned int color)
     {
-        const auto env_term = getenv("TERM");
-        if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
-            return "";
+        if (std::string e = get_env_var("TERM"); e == "dumb") {
+            return std::string();
         }
         return fmt::format("\033[38;5;{}m", color);
     }
 
     /// Set background color
-    ///
     /// @param color Color from Ansi::Color enum
     const std::string setBg(Color color)
     {
-        const auto env_term = getenv("TERM");
-        if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
-            return "";
+        if (std::string e = get_env_var("TERM"); e == "dumb") {
+            return std::string();
         }
         return fmt::format("\033[48;5;{}m", static_cast<unsigned int>(color));
     }
@@ -106,9 +118,8 @@ namespace Ansi {
     /// Reset colors
     const std::string reset()
     {
-        const auto env_term = getenv("TERM");
-        if (env_term == nullptr || strcmp(env_term, "dumb") == 0) {
-            return "";
+        if (std::string e = get_env_var("TERM"); e == "dumb") {
+            return std::string();
         }
         return "\033[0m";
     }
@@ -118,6 +129,12 @@ namespace Ansi {
 struct termsize
 {
     unsigned cols, lines;
+};
+
+struct options
+{
+    std::string cmd, verbosity;
+    bool quiet;
 };
 
 /// Get runtime terminal size (lines & cols)
@@ -139,9 +156,9 @@ std::shared_ptr<termsize> getTermSize()
 }
 
 /// Initialize loguru with command line args
-/// @param `argc` CLI argument count
-/// @param `argv` CLI argument array
-/// @param `verbosity_flag` Optional flag to parse for verbosity level.
+/// @param argc CLI argument count
+/// @param argv CLI argument array
+/// @param verbosity_flag Optional flag to parse for verbosity level.
 /// Set to `nullptr` to skip parsing flag
 ///
 /// | -v | Level  |
@@ -172,57 +189,28 @@ void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
 std::filesystem::path get_todo_file_path()
 {
     // TODO: check env vars
-    std::filesystem::path fpath(std::getenv("HOME"));
+    std::filesystem::path fpath(getenv("HOME"));
     fpath.append("Dropbox").append("todo").append("todo.txt");
-    LOG_F(INFO, "Todo file path: {}", fpath);
+    LOG_F(INFO, "Todo file path: {}", fpath.c_str());
     return fpath;
 }
 
 /// Get entire file as a string
-/// @param `fpath` Path to file
-std::string get_file_contents(std::string_view fpath)
+/// @param fpath Path to file
+std::string get_file_contents(std::filesystem::path fpath)
 {
-    std::ifstream file(fpath.data());
-    CHECK_F(file.is_open(), "Failed to open file '{}'", fpath);
-    std::stringstream ss;
-    ss << file.rdbuf();
-    return ss.str();
-}
-
-/// Get entire file as a string
-/// @param `fpath` Path to file
-std::string get_file_contents2(std::filesystem::path fpath)
-{
-    std::ifstream file(fpath);
+    std::ifstream file{fpath};
+    CHECK_F(file.is_open(), "Failed to open file '{}'", fpath.c_str());
     const auto fsize = std::filesystem::file_size(fpath);
     std::string result(fsize, ' ');
     file.read(result.data(), fsize);
     return result;
 }
 
-std::vector<std::string> get_file_contents_c(std::filesystem::path fpath)
-{
-    FILE* fp = fopen(fpath.c_str(), "r");
-    CHECK_F(fp != NULL);
-
-    char* line = NULL;
-    size_t len = 0;
-    // const auto fsize = std::filesystem::file_size(fpath);
-    // std::string result(fsize, ' ');
-    std::vector<std::string> result;
-    while ((getline(&line, &len, fp)) != -1) {
-        // result.append(line);
-        result.emplace_back(std::string(line));
-    }
-    fclose(fp);
-    if (line) free(line);
-    return result;
-}
-
 /// Get a container of tokens from string
-/// @param `str` String view (read-only) to tokenize
-/// @param `tokens` Container ref to fill
-/// @param `delimiters` Split using this string view
+/// @param str String view (read-only) to tokenize
+/// @param tokens Container ref to fill
+/// @param delimiters Split using this string view
 template <typename ContainerT>
 void tokenize(std::string_view str, ContainerT& tokens, std::string_view delimiters = " ",
               bool trimEmpty = false)
@@ -246,7 +234,7 @@ void tokenize(std::string_view str, ContainerT& tokens, std::string_view delimit
 }
 
 /// Get colorized output for printing to console
-/// @param `lines` Reference to vector of lines
+/// @param lines Reference to vector of lines
 std::string format_lines(std::vector<std::string>& lines)
 {
     std::string out;
@@ -273,6 +261,54 @@ std::string format_lines(std::vector<std::string>& lines)
     return out;
 }
 
+
+/// Remove trailing character of `str` if it matches `ch`
+/// @param str String reference to modify
+/// @param ch Character to chomp if last character in `str`
+void chomp_trailing_char(std::string& str, const char ch)
+{
+    if (auto len = str.length(); len > 0 && str[len - 1] == ch) {
+        str.resize(len - 1);
+        return;
+    }
+    LOG_F(INFO, "Trailing character of string did not match '{}'", ch);
+    return;
+}
+
+int parse_args(int argc, char* argv[], std::shared_ptr<options> opts)
+{
+    args::ArgumentParser parser(PACKAGE_DESCRIPTION);
+    parser.helpParams.useValueNameOnce = true;
+    parser.helpParams.proglinePreferShortFlags = true;
+    parser.helpParams.width = 100;
+    parser.helpParams.proglineOptions = "[OPTIONS]";
+    parser.helpParams.shortSeparator = " ";
+    parser.helpParams.longSeparator = " ";
+    parser.helpParams.valueOpen = "";
+    parser.helpParams.valueClose = "";
+    args::HelpFlag help(parser, "help", "Display this help menu and exit", {'h', "help"});
+    args::Flag version(parser, "version", "Display version info and exit", {'V', "version"});
+    args::Flag quiet(parser, "quiet", "Silence debug messages", {'q', "quiet"});
+    args::ValueFlag<std::string> verbosity(
+        parser, "LEVEL", "Level of debug messages printed to console", {'v', "verbosity"});
+    try {
+        parser.ParseCLI(argc, argv);
+        if (args::get(quiet)) {
+            opts->quiet = true;
+        }
+        return 0;
+    } catch (args::Help&) {
+        auto help = parser.Help();
+        chomp_trailing_char(help, '\n');
+        std::cerr << help;
+        return EXIT_FAILURE;
+    } catch (args::Error& e) {
+        // TODO: print usage here
+        std::cerr << e.what();
+        return EXIT_FAILURE;
+    }
+}
+
 int main(int argc, char** argv)
 {
     if constexpr (DEBUG_MODE) {
@@ -288,15 +324,16 @@ int main(int argc, char** argv)
         init_loguru(arg_ct, args.data());
     } else {
         loguru::g_internal_verbosity = 1;
-        // init loguru with raw cli args
-        init_loguru(argc, argv);
+        init_loguru(argc, argv); // init loguru with raw cli args
     }
-
-    std::string raw(get_file_contents2(get_todo_file_path().string()));
-    // std::vector<std::string> lines(get_file_contents_c(get_todo_file_path().string()));
+    std::shared_ptr<options> opts = std::make_shared<options>();
+    if (parse_args(argc, argv, opts) != 0) {
+        exit(EXIT_FAILURE);
+    }
+    std::string raw(get_file_contents(get_todo_file_path()));
     std::vector<std::string> lines;
     tokenize(raw, lines, "\n", true);
-    LOG_F(2, "{}\n", prettify(lines));
+    // LOG_F(2, "{}\n", prettify(lines));
     std::string out(format_lines(lines));
 
     // write output to stdout
