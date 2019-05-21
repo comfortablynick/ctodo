@@ -134,7 +134,7 @@ struct termsize
 struct options
 {
     std::string cmd, verbosity;
-    bool quiet;
+    bool quiet, getline;
 };
 
 /// Get runtime terminal size (lines & cols)
@@ -204,6 +204,22 @@ std::string get_file_contents(std::filesystem::path fpath)
     const auto fsize = std::filesystem::file_size(fpath);
     std::string result(fsize, ' ');
     file.read(result.data(), fsize);
+    return result;
+}
+
+/// Get entire file as a vec of strings
+/// @param fpath Path to file
+std::vector<std::string> get_file_lines(std::filesystem::path fpath)
+{
+    std::ifstream file{fpath};
+    CHECK_F(file.is_open(), "Failed to open file '{}'", fpath.c_str());
+    std::vector<std::string> result;
+    std::string line;
+    line.reserve(256);
+    while (getline(file, line)) {
+        result.emplace_back(line);
+    }
+    file.close();
     return result;
 }
 
@@ -289,13 +305,13 @@ int parse_args(int argc, char* argv[], std::shared_ptr<options> opts)
     args::HelpFlag help(parser, "help", "Display this help menu and exit", {'h', "help"});
     args::Flag version(parser, "version", "Display version info and exit", {'V', "version"});
     args::Flag quiet(parser, "quiet", "Silence debug messages", {'q', "quiet"});
+    args::Flag getline(parser, "getline", "Use getline method to read file", {'g', "getline"});
     args::ValueFlag<std::string> verbosity(
         parser, "LEVEL", "Level of debug messages printed to console", {'v', "verbosity"});
     try {
         parser.ParseCLI(argc, argv);
-        if (args::get(quiet)) {
-            opts->quiet = true;
-        }
+        if (args::get(quiet)) opts->quiet = true;
+        if (args::get(getline)) opts->getline = true;
         return 0;
     } catch (args::Help&) {
         auto help = parser.Help();
@@ -330,12 +346,18 @@ int main(int argc, char** argv)
     if (parse_args(argc, argv, opts) != 0) {
         exit(EXIT_FAILURE);
     }
-    std::string raw(get_file_contents(get_todo_file_path()));
-    std::vector<std::string> lines;
-    tokenize(raw, lines, "\n", true);
-    // LOG_F(2, "{}\n", prettify(lines));
-    std::string out(format_lines(lines));
-
-    // write output to stdout
-    std::cout << out << std::endl;
+    auto fpath = get_todo_file_path();
+    if (opts->getline) {
+        LOG_F(INFO, "Reading file lines into vector");
+        auto lines = get_file_lines(fpath);
+        std::string out(format_lines(lines));
+        std::cout << out << std::endl;
+    } else {
+        LOG_F(INFO, "Reading contents of file into string");
+        std::string raw(get_file_contents(fpath));
+        std::vector<std::string> lines;
+        tokenize(raw, lines, "\n", true);
+        std::string out(format_lines(lines));
+        std::cout << out << std::endl;
+    }
 }
