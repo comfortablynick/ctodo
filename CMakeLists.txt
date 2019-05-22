@@ -38,8 +38,6 @@ find_lto(CXX)
 # -----------------------------------------------------------------------------
 # Locate files (change as needed).
 # -----------------------------------------------------------------------------
-set(SOURCES # All .cpp files in src/
-    src/main.cpp)
 set(TESTFILES # All .cpp files in tests/
     tests/main.cpp)
 
@@ -57,7 +55,8 @@ include(Configure)
 # Build! (Change as needed)
 # -----------------------------------------------------------------------------
 
-add_executable(ctodo src/main.cc) # Name of exec. and location of file.
+add_executable(ctodo src/common.cc src/common.h src/main.cc) # Name of exec. and
+                                                             # location of file.
 target_include_directories(ctodo PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(ctodo PUBLIC fmt loguru stdc++fs)
 set(IWYU_TARGETS ctodo)
