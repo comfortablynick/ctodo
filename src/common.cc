@@ -7,6 +7,30 @@
 #include <string>
 #include <string_view>
 
+/// Get runtime terminal size (lines & cols)
+std::shared_ptr<termsize> getTermSize()
+{
+    auto tsize_t = std::make_shared<termsize>();
+#if defined(TIOCGSIZE)
+    struct ttysize ts;
+    ioctl(STDIN_FILENO, TIOCGSIZE, &ts);
+    tsize_t->cols = ts.ts_cols;
+    tsize_t->lines = ts.ts_lines;
+#elif defined(TIOCGWINSZ)
+    struct winsize ts;
+    ioctl(STDIN_FILENO, TIOCGWINSZ, &ts);
+    tsize_t->cols = ts.ws_col;
+    tsize_t->lines = ts.ws_row;
+#endif
+    return tsize_t;
+}
+
+std::string prettify(int size, char** data)
+{
+    std::vector<std::string> vec(data, data + size);
+    return prettify(vec);
+}
+
 /// Get string value of env variable
 /// @param key Read-only env var key
 std::string get_env_var(std::string_view key)

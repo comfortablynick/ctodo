@@ -55,7 +55,7 @@ include(Configure)
 # Build! (Change as needed)
 # -----------------------------------------------------------------------------
 
-add_executable(ctodo src/common.cc src/common.h src/main.cc) # Name of exec. and
+add_executable(ctodo src/common.cc src/main.cc) # Name of exec. and
                                                              # location of file.
 target_include_directories(ctodo PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(ctodo PUBLIC fmt loguru stdc++fs)

@@ -2,54 +2,20 @@
 #include "config.h"
 #include <algorithm>
 #include <args.hxx>
+#include <bits/getopt_core.h>
 #include <cstdlib>
-// #include <cxxopts.hpp>
 #include <ext/alloc_traits.h>
 #include <filesystem>
 #include <fmt/core.h>
-// #include <fmt/format.h>
 #include <fstream> // IWYU pragma: keep
 #include <iostream>
 #include <loguru.hpp>
 #include <memory>
 #include <string>
 #include <string_view>
-#include <sys/ioctl.h>
-#include <unistd.h>
 #include <vector>
-// #include <algorithm>
 
 constexpr bool DEBUG_MODE = true; // More verbose console logging
-
-/// Data structure for terminal cols and lines
-struct termsize
-{
-    unsigned cols, lines;
-};
-
-struct options
-{
-    std::string cmd, verbosity;
-    bool quiet, getline;
-};
-
-/// Get runtime terminal size (lines & cols)
-std::shared_ptr<termsize> getTermSize()
-{
-    auto tsize_t = std::make_shared<termsize>();
-#if defined(TIOCGSIZE)
-    struct ttysize ts;
-    ioctl(STDIN_FILENO, TIOCGSIZE, &ts);
-    tsize_t->cols = ts.ts_cols;
-    tsize_t->lines = ts.ts_lines;
-#elif defined(TIOCGWINSZ)
-    struct winsize ts;
-    ioctl(STDIN_FILENO, TIOCGWINSZ, &ts);
-    tsize_t->cols = ts.ws_col;
-    tsize_t->lines = ts.ws_row;
-#endif
-    return tsize_t;
-}
 
 /// Initialize loguru with command line args
 /// @param argc CLI argument count
@@ -174,7 +140,8 @@ std::string format_lines(std::vector<std::string>& lines)
 }
 
 
-/// Remove trailing character of `str` if it matches `ch`
+/// @brief Remove trailing character of `str` if it matches `ch`
+///
 /// @param str String reference to modify
 /// @param ch Character to chomp if last character in `str`
 void chomp_trailing_char(std::string& str, const char ch)
@@ -186,6 +153,53 @@ void chomp_trailing_char(std::string& str, const char ch)
     LOG_F(INFO, "Trailing character of string did not match '{}'", ch);
     return;
 }
+
+/**
+ * @brief Use getopt() to parse specified command-line flags
+ *
+ * @param argc Argument count
+ * @param argv Arguments
+ * @param opts Options object
+ *
+ * @return Non-zero value if an error is encountered
+ */
+int parse_opts(int argc, char* argv[], std::shared_ptr<options> opts)
+{
+    int opt;
+    extern char* optarg;
+    extern int optind, optopt, opterr;
+    opterr = 0; // tell getopt not to print errors to stderr
+
+    while ((opt = getopt(argc, argv, "hVqgv:t:")) != -1) {
+        LOG_F(3, "Opt index {}: {}", optind, char(optopt));
+        switch (opt) {
+        case 'h':
+            fmt::print("Usage: {}\n", argv[0]);
+            break;
+        case 'q':
+            opts->quiet = true;
+            break;
+        case ':':
+            LOG_F(WARNING, "Option '{}' requires an argument", optopt);
+            break;
+        case 'v':
+            break;
+        case '?':
+            LOG_F(WARNING, "Unknown option '{}'", char(optopt));
+            break;
+        default:
+            LOG_F(1, "Found: {}", optarg);
+        }
+    }
+    if (LOG_IS_ON(2) && argc > 0) {
+        LOG_SCOPE_F(2, "Argv after parsing:");
+        for (int i = 0; i < argc; ++i) {
+            LOG_F(2, "{}: {}", i, argv[i]);
+        }
+    }
+    return 0;
+}
+
 
 int parse_args(int argc, char* argv[], std::shared_ptr<options> opts)
 {
@@ -239,7 +253,10 @@ int main(int argc, char** argv)
         init_loguru(argc, argv); // init loguru with raw cli args
     }
     std::shared_ptr<options> opts = std::make_shared<options>();
-    if (parse_args(argc, argv, opts) != 0) {
+    // if (parse_args(argc, argv, opts) != 0) {
+    //     exit(EXIT_FAILURE);
+    // }
+    if (parse_opts(argc, argv, opts) != 0) {
         exit(EXIT_FAILURE);
     }
     auto fpath = get_todo_file_path();

@@ -1,8 +1,23 @@
 #include <fmt/format.h>
 #include <iostream>
+#include <memory>
 #include <stddef.h>
 #include <string>
 #include <vector>
+
+/// @brief Data structure to hold common program options
+struct options
+{
+    std::string cmd, verbosity;
+    bool quiet, getline;
+};
+
+/// Data structure for terminal cols and lines
+struct termsize
+{
+    unsigned cols, lines;
+};
+std::shared_ptr<termsize> getTermSize();
 
 /// Output a text representation of vector to stream.
 /// For pretty output, use prettify() to get string first.
@@ -35,6 +50,7 @@ std::string prettify(const std::vector<T>& vec)
     fmt::format_to(out, "\n]");
     return fmt::to_string(out);
 }
+std::string prettify(int, char**);
 
 namespace Ansi {
     /// Value on the Ansi 256 color spectrum
