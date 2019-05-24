@@ -43,8 +43,7 @@ set(TESTFILES # All .cpp files in tests/
 
 find_package(fmt)
 find_package(loguru)
-find_package(args)
-# find_package(cxxopts)
+# find_package(args) find_package(cxxopts)
 
 # -----------------------------------------------------------------------------
 # Generate config.h
@@ -55,8 +54,8 @@ include(Configure)
 # Build! (Change as needed)
 # -----------------------------------------------------------------------------
 
-add_executable(ctodo src/common.cc src/main.cc) # Name of exec. and
-                                                             # location of file.
+add_executable(ctodo src/common.cc src/main.cc) # Name of exec. and location of
+                                                # file.
 target_include_directories(ctodo PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(ctodo PUBLIC fmt loguru stdc++fs)
 set(IWYU_TARGETS ctodo)
