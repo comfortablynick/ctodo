@@ -1,4 +1,3 @@
-// #include <args.hxx>
 #include "common.h"
 #include "config.h"
 #include <algorithm>
@@ -17,18 +16,20 @@
 
 constexpr bool DEBUG_MODE = true; // More verbose console logging
 
-/// Initialize loguru with command line args
-/// @param argc CLI argument count
-/// @param argv CLI argument array
-/// @param verbosity_flag Optional flag to parse for verbosity level.
-/// Set to `nullptr` to skip parsing flag
-///
-/// | -v | Level  |
-/// |----|--------|
-/// | -2 |   ERROR|
-/// | -1 | WARNING|
-/// |  0 |    INFO|
-/// |1-9 | VERBOSE|
+/**
+ * @brief Initialize loguru with command line args
+ * @param argc CLI argument count
+ * @param argv CLI argument array
+ * @param verbosity_flag Optional flag to parse for verbosity level.
+ * Set to `nullptr` to skip parsing flag
+ *
+ * | -v | Level  |
+ * |----|--------|
+ * | -2 |   ERROR|
+ * | -1 | WARNING|
+ * |  0 |    INFO|
+ * |1-9 | VERBOSE|
+ */
 void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
 {
     loguru::g_stderr_verbosity = -2;
@@ -200,40 +201,15 @@ int parse_opts(int argc, char* argv[], std::shared_ptr<options> opts)
     return 0;
 }
 
-// int parse_args(int argc, char* argv[], std::shared_ptr<options> opts)
-// {
-//     args::ArgumentParser parser(PACKAGE_DESCRIPTION);
-//     parser.helpParams.useValueNameOnce = true;
-//     parser.helpParams.proglinePreferShortFlags = true;
-//     parser.helpParams.width = 100;
-//     parser.helpParams.proglineOptions = "[OPTIONS]";
-//     parser.helpParams.shortSeparator = " ";
-//     parser.helpParams.longSeparator = " ";
-//     parser.helpParams.valueOpen = "";
-//     parser.helpParams.valueClose = "";
-//     args::HelpFlag help(parser, "help", "Display this help menu and exit", {'h', "help"});
-//     args::Flag version(parser, "version", "Display version info and exit", {'V', "version"});
-//     args::Flag quiet(parser, "quiet", "Silence debug messages", {'q', "quiet"});
-//     args::Flag getline(parser, "getline", "Use getline method to read file", {'g', "getline"});
-//     args::ValueFlag<std::string> verbosity(
-//         parser, "LEVEL", "Level of debug messages printed to console", {'v', "verbosity"});
-//     try {
-//         parser.ParseCLI(argc, argv);
-//         if (args::get(quiet)) opts->quiet = true;
-//         if (args::get(getline)) opts->getline = true;
-//         return 0;
-//     } catch (args::Help&) {
-//         auto help = parser.Help();
-//         chomp_trailing_char(help, '\n');
-//         std::cerr << help;
-//         return EXIT_FAILURE;
-//     } catch (args::Error& e) {
-//         // TODO: print usage here
-//         std::cerr << e.what();
-//         return EXIT_FAILURE;
-//     }
-// }
 
+/**
+ * @brief Entry point to program
+ *
+ * @param argc Count of CLI arguments
+ * @param argv CLI arguments
+ *
+ * @return int Status returned to calling program
+ */
 int main(int argc, char** argv)
 {
     if constexpr (DEBUG_MODE) {
