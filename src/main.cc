@@ -1,3 +1,4 @@
+#include "CLI11.hpp"
 #include "common.h"
 #include "config.h"
 #include <algorithm>
@@ -6,10 +7,12 @@
 #include <ext/alloc_traits.h>
 #include <filesystem>
 #include <fmt/core.h>
-#include <fstream> // IWYU pragma: keep
+#include <fmt/ostream.h> // IWYU pragma: keep
+#include <fstream>       // IWYU pragma: keep
 #include <iostream>
 #include <loguru.hpp>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -18,10 +21,6 @@ constexpr bool DEBUG_MODE = true; // More verbose console logging
 
 /**
  * @brief Initialize loguru with command line args
- * @param argc CLI argument count
- * @param argv CLI argument array
- * @param verbosity_flag Optional flag to parse for verbosity level.
- * Set to `nullptr` to skip parsing flag
  *
  * | -v | Level  |
  * |----|--------|
@@ -29,6 +28,13 @@ constexpr bool DEBUG_MODE = true; // More verbose console logging
  * | -1 | WARNING|
  * |  0 |    INFO|
  * |1-9 | VERBOSE|
+ *
+ * @param argc CLI argument count
+ * @param argv CLI argument array
+ * @param verbosity_flag Optional flag to parse for verbosity level.
+ * Set to `nullptr` to skip parsing flag
+ *
+ * @return void
  */
 void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
 {
@@ -48,7 +54,13 @@ void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
     VLOG_F(1, "Terminal size: {}x{}", tsize->cols, tsize->lines);
 }
 
-/// Get filesystem path of todo.txt file
+/**
+ * @brief Get path to file
+ *
+ * @param void
+ *
+ * @return std::filesystem::path
+ */
 std::filesystem::path get_todo_file_path()
 {
     // TODO: check env vars
@@ -58,8 +70,13 @@ std::filesystem::path get_todo_file_path()
     return fpath;
 }
 
-/// Get entire file as a string
-/// @param fpath Path to file
+/**
+ * @brief Get entire file as a vec of strings
+ *
+ * @param fpath Path to file
+ *
+ * @return std::string File contents
+ */
 std::string get_file_contents(std::filesystem::path fpath)
 {
     std::ifstream file{fpath};
@@ -70,8 +87,13 @@ std::string get_file_contents(std::filesystem::path fpath)
     return result;
 }
 
-/// Get entire file as a vec of strings
-/// @param fpath Path to file
+/**
+ * @brief Get entire file as a vec of strings
+ *
+ * @param fpath Path to file
+ *
+ * @return std::vector<std::string> File lines
+ */
 std::vector<std::string> get_file_lines(std::filesystem::path fpath)
 {
     std::ifstream file{fpath};
@@ -86,10 +108,16 @@ std::vector<std::string> get_file_lines(std::filesystem::path fpath)
     return result;
 }
 
-/// Get a container of tokens from string
-/// @param str String view (read-only) to tokenize
-/// @param tokens Container ref to fill
-/// @param delimiters Split using this string view
+/**
+ * @brief Get a container of tokens from string
+ *
+ * @param str String view (read-only) to tokenize
+ * @param tokens Container ref to fill
+ * @param delimiters Split by this string (default: " ")
+ * @param trimEmptyfalse Trim empty lines
+ *
+ * @return void
+ */
 template <typename ContainerT>
 void tokenize(std::string_view str, ContainerT& tokens, std::string_view delimiters = " ",
               bool trimEmpty = false)
@@ -112,8 +140,13 @@ void tokenize(std::string_view str, ContainerT& tokens, std::string_view delimit
     }
 }
 
-/// Get colorized output for printing to console
-/// @param lines Reference to vector of lines
+/**
+ * @brief Format lines of todo.txt file
+ *
+ * @param lines
+ *
+ * @return std::string Formatted lines joined together
+ */
 std::string format_lines(std::vector<std::string>& lines)
 {
     std::string out;
@@ -141,10 +174,14 @@ std::string format_lines(std::vector<std::string>& lines)
 }
 
 
-/// @brief Remove trailing character of `str` if it matches `ch`
-///
-/// @param str String reference to modify
-/// @param ch Character to chomp if last character in `str`
+/**
+ * @brief Remove trailing character of `str` if it matches `ch`
+ *
+ * @param str String reference to modify
+ * @param ch Character to chomp if last character in `str`
+ *
+ * @return void
+ */
 void chomp_trailing_char(std::string& str, const char ch)
 {
     if (auto len = str.length(); len > 0 && str[len - 1] == ch) {
@@ -162,7 +199,7 @@ void chomp_trailing_char(std::string& str, const char ch)
  * @param argv Arguments
  * @param opts Options object
  *
- * @return Non-zero value if an error is encountered
+ * @return int Non-zero value if an error is encountered
  */
 int parse_opts(int argc, char* argv[], std::shared_ptr<options> opts)
 {
@@ -192,15 +229,43 @@ int parse_opts(int argc, char* argv[], std::shared_ptr<options> opts)
             LOG_F(1, "Found: {}", optarg);
         }
     }
+
+    std::vector<std::string> cmds{"add", "list"};
+
     if (LOG_IS_ON(2) && argc > 0) {
         LOG_SCOPE_F(2, "Argv after parsing:");
         for (int i = 0; i < argc; ++i) {
             LOG_F(2, "{}: {}", i, argv[i]);
+            if (std::find(cmds.begin(), cmds.end(), argv[i]) != cmds.end()) {
+                LOG_F(2, "--> Found command '{}'", argv[i]);
+                opts->cmd = argv[i];
+            }
         }
     }
     return 0;
 }
 
+int parse_args(int argc, char** argv)
+{
+    CLI::App app{PACKAGE_DESCRIPTION};
+
+    bool quiet, version;
+
+    app.add_flag("-q,--quiet", quiet, "Silence debug output");
+    app.add_flag("-V,--version", version, "Print version info and exit");
+
+    try {
+        app.parse(argc, argv);
+    } catch (const CLI::ParseError& e) {
+        if (e.get_name() == "CallForHelp") {
+            std::cerr << app.help();
+            return 1;
+        }
+        LOG_F(ERROR, "ExitCode: {}, Name: {}, What: {}", e.get_exit_code(), e.get_name(), e.what());
+        return app.exit(e);
+    }
+    return 0;
+}
 
 /**
  * @brief Entry point to program
@@ -228,12 +293,14 @@ int main(int argc, char** argv)
         init_loguru(argc, argv); // init loguru with raw cli args
     }
     std::shared_ptr<options> opts = std::make_shared<options>();
-    // if (parse_args(argc, argv, opts) != 0) {
+    // if (parse_opts(argc, argv, opts) != 0) {
     //     exit(EXIT_FAILURE);
     // }
-    if (parse_opts(argc, argv, opts) != 0) {
-        exit(EXIT_FAILURE);
+    if (int p = parse_args(argc, argv); p != 0) {
+        exit(p);
     }
+
+    LOG_F(2, "{}", opts);
     auto fpath = get_todo_file_path();
     if (opts->getline) {
         LOG_F(INFO, "Reading file lines into vector");

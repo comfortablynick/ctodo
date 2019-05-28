@@ -43,7 +43,6 @@ set(TESTFILES # All .cpp files in tests/
 
 find_package(fmt)
 find_package(loguru)
-# find_package(args) find_package(cxxopts)
 
 # -----------------------------------------------------------------------------
 # Generate config.h

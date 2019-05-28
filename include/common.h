@@ -12,6 +12,8 @@ struct options
     bool quiet, getline;
 };
 
+std::ostream& operator<<(std::ostream&, std::shared_ptr<options>);
+
 /// Data structure for terminal cols and lines
 struct termsize
 {

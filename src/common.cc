@@ -7,6 +7,17 @@
 #include <string>
 #include <string_view>
 
+std::ostream& operator<<(std::ostream& out, std::shared_ptr<options> obj)
+{
+    out << "Options:";
+    out << "\n  Cmd: " << obj->cmd;
+    out << "\n  Verbosity: " << obj->verbosity;
+    out << "\n  Quiet: " << obj->quiet;
+    out << "\n  Getline: " << obj->getline;
+    out << '\n';
+    return out;
+}
+
 /// Get runtime terminal size (lines & cols)
 std::shared_ptr<termsize> getTermSize()
 {
