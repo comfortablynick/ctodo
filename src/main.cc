@@ -20,7 +20,7 @@
 constexpr bool DEBUG_MODE = true; // More verbose console logging
 
 /**
- * @brief Initialize loguru with command line args
+ * Initialize loguru with command line args
  *
  * | -v | Level  |
  * |----|--------|
@@ -55,7 +55,7 @@ void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
 }
 
 /**
- * @brief Get path to file
+ * Get path to file
  *
  * @param void
  *
@@ -71,7 +71,7 @@ std::filesystem::path get_todo_file_path()
 }
 
 /**
- * @brief Get entire file as a vec of strings
+ * Get entire file as a vec of strings
  *
  * @param fpath Path to file
  *
@@ -88,7 +88,7 @@ std::string get_file_contents(std::filesystem::path fpath)
 }
 
 /**
- * @brief Get entire file as a vec of strings
+ * Get entire file as a vec of strings
  *
  * @param fpath Path to file
  *
@@ -109,7 +109,7 @@ std::vector<std::string> get_file_lines(std::filesystem::path fpath)
 }
 
 /**
- * @brief Get a container of tokens from string
+ * Get a container of tokens from string
  *
  * @param str String view (read-only) to tokenize
  * @param tokens Container ref to fill
@@ -141,7 +141,7 @@ void tokenize(std::string_view str, ContainerT& tokens, std::string_view delimit
 }
 
 /**
- * @brief Format lines of todo.txt file
+ * Format lines of todo.txt file
  *
  * @param lines
  *
@@ -175,7 +175,7 @@ std::string format_lines(std::vector<std::string>& lines)
 
 
 /**
- * @brief Remove trailing character of `str` if it matches `ch`
+ * Remove trailing character of `str` if it matches `ch`
  *
  * @param str String reference to modify
  * @param ch Character to chomp if last character in `str`
@@ -193,7 +193,7 @@ void chomp_trailing_char(std::string& str, const char ch)
 }
 
 /**
- * @brief Use getopt() to parse specified command-line flags
+ * Use getopt() to parse specified command-line flags
  *
  * @param argc Argument count
  * @param argv Arguments
@@ -268,7 +268,7 @@ int parse_args(int argc, char** argv)
 }
 
 /**
- * @brief Entry point to program
+ * Entry point to program
  *
  * @param argc Count of CLI arguments
  * @param argv CLI arguments
