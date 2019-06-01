@@ -17,7 +17,7 @@
 #include <string_view>
 #include <vector>
 
-constexpr bool DEBUG_MODE = true; // More verbose console logging
+constexpr bool DEBUG_MODE = false; // More verbose console logging
 
 /**
  * Initialize loguru with command line args
@@ -245,25 +245,42 @@ int parse_opts(int argc, char* argv[], std::shared_ptr<options> opts)
     return 0;
 }
 
-int parse_args(int argc, char** argv)
+/**
+ * Parse command-line arguments and commands.
+ *
+ * @param argc Argument count
+ * @param argv Array of arguments
+ * @param opts Shared pointer of global options object
+ *
+ * @return int Success or failure of parsing
+ */
+int parse_args(int argc, char** argv, std::shared_ptr<options> opts)
 {
     CLI::App app{PACKAGE_DESCRIPTION};
 
     bool quiet, version;
+    std::string verbosity;
 
     app.add_flag("-q,--quiet", quiet, "Silence debug output");
     app.add_flag("-V,--version", version, "Print version info and exit");
+    app.add_option("-v,--verbosity", verbosity, "Print debug logs to console");
 
     try {
         app.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
         if (e.get_name() == "CallForHelp") {
+            // manually handle help and retval
+            // build in function returns 0 for help
             std::cerr << app.help();
             return 1;
         }
         LOG_F(ERROR, "ExitCode: {}, Name: {}, What: {}", e.get_exit_code(), e.get_name(), e.what());
         return app.exit(e);
     }
+    // set opts object variables
+    opts->quiet = quiet;
+    opts->verbosity = verbosity;
+
     return 0;
 }
 
@@ -289,17 +306,19 @@ int main(int argc, char** argv)
         int arg_ct = args.size();
         init_loguru(arg_ct, args.data());
     } else {
-        loguru::g_internal_verbosity = 1;
+        // loguru::g_internal_verbosity = 1;
         init_loguru(argc, argv); // init loguru with raw cli args
     }
     std::shared_ptr<options> opts = std::make_shared<options>();
     // if (parse_opts(argc, argv, opts) != 0) {
     //     exit(EXIT_FAILURE);
     // }
-    if (int p = parse_args(argc, argv); p != 0) {
+    if (int p = parse_args(argc, argv, opts); p != 0) {
         exit(p);
     }
 
+    loguru::g_stderr_verbosity = loguru::get_verbosity_from_name(opts->verbosity.data());
+    if (opts->quiet) loguru::g_stderr_verbosity = loguru::Verbosity_OFF;
     LOG_F(2, "{}", opts);
     auto fpath = get_todo_file_path();
     if (opts->getline) {
