@@ -264,6 +264,7 @@ int parse_args(int argc, char** argv, std::shared_ptr<options> opts)
     app.add_flag("-q,--quiet", quiet, "Silence debug output");
     app.add_flag("-V,--version", version, "Print version info and exit");
     app.add_option("-v,--verbosity", verbosity, "Print debug logs to console");
+    CLI::App* list = app.add_subcommand("list", "list contents of todo.txt file");
 
     try {
         app.parse(argc, argv);
@@ -277,10 +278,17 @@ int parse_args(int argc, char** argv, std::shared_ptr<options> opts)
         LOG_F(ERROR, "ExitCode: {}, Name: {}, What: {}", e.get_exit_code(), e.get_name(), e.what());
         return app.exit(e);
     }
+    if (version) {
+        std::cerr << PACKAGE_STRING << '\n'
+                  << PACKAGE_URL << '\n'
+                  << PACKAGE_BUGREPORT << std::endl;
+        return 1;
+    }
     // set opts object variables
     opts->quiet = quiet;
     opts->verbosity = verbosity;
 
+    if (list->parsed()) LOG_F(INFO, "Got `list` command");
     return 0;
 }
 
@@ -310,14 +318,11 @@ int main(int argc, char** argv)
         init_loguru(argc, argv); // init loguru with raw cli args
     }
     std::shared_ptr<options> opts = std::make_shared<options>();
-    // if (parse_opts(argc, argv, opts) != 0) {
-    //     exit(EXIT_FAILURE);
-    // }
     if (int p = parse_args(argc, argv, opts); p != 0) {
         exit(p);
     }
 
-    loguru::g_stderr_verbosity = loguru::get_verbosity_from_name(opts->verbosity.data());
+    // loguru::g_stderr_verbosity = loguru::get_verbosity_from_name(opts->verbosity.data());
     if (opts->quiet) loguru::g_stderr_verbosity = loguru::Verbosity_OFF;
     LOG_F(2, "{}", opts);
     auto fpath = get_todo_file_path();
