@@ -1,8 +1,10 @@
+#define OPTPARSE_IMPLEMENTATION
+#define OPTPARSE_API static
 #include "CLI11.hpp"
 #include "common.h"
 #include "config.h"
+#include "optparse.h"
 #include <algorithm>
-#include <bits/getopt_core.h>
 #include <cstdlib>
 #include <ext/alloc_traits.h>
 #include <filesystem>
@@ -173,6 +175,8 @@ std::string format_lines(std::vector<std::string>& lines)
     return out;
 }
 
+// std::string get_help() {
+// }
 
 /**
  * Remove trailing character of `str` if it matches `ch`
@@ -193,23 +197,22 @@ void chomp_trailing_char(std::string& str, const char ch)
 }
 
 /**
- * Use getopt() to parse specified command-line flags
+ * Use optparse() to parse specified command-line flags
  *
- * @param argc Argument count
  * @param argv Arguments
  * @param opts Options object
  *
  * @return int Non-zero value if an error is encountered
  */
-int parse_opts(int argc, char* argv[], std::shared_ptr<options> opts)
+int parse_opts(char** argv, std::shared_ptr<options> opts)
 {
     int opt;
-    extern char* optarg;
-    extern int optind, optopt, opterr;
-    opterr = 0; // tell getopt not to print errors to stderr
+    char* arg;
+    struct optparse options;
+    optparse_init(&options, argv);
 
-    while ((opt = getopt(argc, argv, "hVqgv:t:")) != -1) {
-        LOG_F(3, "Opt index {}: {}", optind, char(optopt));
+    while ((opt = optparse(&options, "hVqgv:")) != -1) {
+        LOG_F(3, "Opt index {}: {}", options.optind, char(options.optopt));
         switch (opt) {
         case 'h':
             fmt::print("Usage: {}\n", argv[0]);
@@ -218,30 +221,45 @@ int parse_opts(int argc, char* argv[], std::shared_ptr<options> opts)
             opts->quiet = true;
             break;
         case ':':
-            LOG_F(WARNING, "Option '{}' requires an argument", optopt);
+            LOG_F(WARNING, "Option '{}' requires an argument", options.optopt);
             break;
         case 'v':
+            opts->verbosity = options.optarg;
+            break;
+        case 'V':
+            LOG_F(INFO, "Found version flag");
             break;
         case '?':
-            LOG_F(WARNING, "Unknown option '{}'", char(optopt));
+            LOG_F(WARNING, "Unknown option '{}'", char(options.optopt));
             break;
         default:
-            LOG_F(1, "Found: {}", optarg);
+            LOG_F(1, "Found: {}", options.optarg);
         }
     }
 
     std::vector<std::string> cmds{"add", "list"};
-
-    if (LOG_IS_ON(2) && argc > 0) {
+    if (LOG_IS_ON(2)) {
         LOG_SCOPE_F(2, "Argv after parsing:");
-        for (int i = 0; i < argc; ++i) {
-            LOG_F(2, "{}: {}", i, argv[i]);
-            if (std::find(cmds.begin(), cmds.end(), argv[i]) != cmds.end()) {
-                LOG_F(2, "--> Found command '{}'", argv[i]);
-                opts->cmd = argv[i];
+        auto i = 0;
+        while ((arg = optparse_arg(&options))) {
+            LOG_F(2, "{}: {}", i, arg);
+            if (std::find(cmds.begin(), cmds.end(), arg) != cmds.end()) {
+                LOG_F(2, "--> Found command '{}'", arg);
+                opts->cmd = arg;
             }
+            ++i;
         }
     }
+    // if (LOG_IS_ON(2) && argc > 0) {
+    //     LOG_SCOPE_F(2, "Argv after parsing:");
+    //     for (int i = 0; i < argc; ++i) {
+    //         LOG_F(2, "{}: {}", i, argv[i]);
+    //         if (std::find(cmds.begin(), cmds.end(), argv[i]) != cmds.end()) {
+    //             LOG_F(2, "--> Found command '{}'", argv[i]);
+    //             opts->cmd = argv[i];
+    //         }
+    //     }
+    // }
     return 0;
 }
 
@@ -258,13 +276,18 @@ int parse_args(int argc, char** argv, std::shared_ptr<options> opts)
 {
     CLI::App app{PACKAGE_DESCRIPTION};
 
-    bool quiet, version;
+    bool quiet, version, getline;
     std::string verbosity;
 
     app.add_flag("-q,--quiet", quiet, "Silence debug output");
     app.add_flag("-V,--version", version, "Print version info and exit");
+    app.add_flag("-g,--getline", getline, "Use getline() method for reading file");
     app.add_option("-v,--verbosity", verbosity, "Print debug logs to console");
-    CLI::App* list = app.add_subcommand("list", "list contents of todo.txt file");
+
+    // Subcommands
+    auto add = std::make_shared<CLI::App>("add todo item");
+    auto list = std::make_shared<CLI::App>("list contents of todo.txt file", "list");
+    app.add_subcommand(list);
 
     try {
         app.parse(argc, argv);
@@ -287,8 +310,11 @@ int parse_args(int argc, char** argv, std::shared_ptr<options> opts)
     // set opts object variables
     opts->quiet = quiet;
     opts->verbosity = verbosity;
+    opts->getline = getline;
 
-    if (list->parsed()) LOG_F(INFO, "Got `list` command");
+    for (auto sub : app.get_subcommands()) {
+        LOG_F(INFO, "Got `{}` command", sub->get_name());
+    }
     return 0;
 }
 
@@ -318,7 +344,7 @@ int main(int argc, char** argv)
         init_loguru(argc, argv); // init loguru with raw cli args
     }
     std::shared_ptr<options> opts = std::make_shared<options>();
-    if (int p = parse_args(argc, argv, opts); p != 0) {
+    if (int p = parse_opts(argv, opts); p != 0) {
         exit(p);
     }
 
