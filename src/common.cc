@@ -2,7 +2,7 @@
 #define _CONFIG_H_
 #include "common.h"
 #include <fmt/core.h>
-#include <loguru.hpp>
+#include <loguru/loguru.hpp>
 #include <stdlib.h>
 #include <string>
 #include <string_view>
@@ -50,7 +50,7 @@ std::string get_env_var(std::string_view key)
     if (val != nullptr) {
         return std::string(val);
     }
-    LOG_F(WARNING, "Undefined env var '{}'", key);
+    /* LOG_F(WARNING, "Undefined env var '{}'", key); */
     return std::string();
 }
 

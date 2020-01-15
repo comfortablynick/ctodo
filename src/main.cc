@@ -1,9 +1,10 @@
+#define LOGURU_USE_FMTLIB 1
 #define OPTPARSE_IMPLEMENTATION
 #define OPTPARSE_API static
-#include "CLI11.hpp"
 #include "common.h"
 #include "config.h"
 #include "optparse.h"
+#include <CLI/CLI.hpp>
 #include <algorithm>
 #include <cstdlib>
 #include <ext/alloc_traits.h>
@@ -12,6 +13,7 @@
 #include <fmt/ostream.h> // IWYU pragma: keep
 #include <fstream>       // IWYU pragma: keep
 #include <iostream>
+/* #include <loguru/loguru.hpp> */
 #include <loguru.hpp>
 #include <memory>
 #include <stdexcept>
@@ -38,7 +40,7 @@ constexpr bool DEBUG_MODE = false; // More verbose console logging
  *
  * @return void
  */
-void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
+void init_loguru(int& argc, char** argv)
 {
     loguru::g_stderr_verbosity = -2;
     loguru::g_colorlogtostderr = true;
@@ -52,7 +54,7 @@ void init_loguru(int& argc, char** argv, const char* verbosity_flag = "-v")
             loguru::g_preamble_file = false;
         }
     }
-    loguru::init(argc, argv, verbosity_flag);
+    loguru::init(argc, argv);
     VLOG_F(1, "Terminal size: {}x{}", tsize->cols, tsize->lines);
 }
 
